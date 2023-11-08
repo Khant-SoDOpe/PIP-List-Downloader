@@ -4,10 +4,10 @@ import subprocess
 from dotenv import load_dotenv
 import os
 
+# Load environment variables from a .env file
 load_dotenv()
 
-
-# Define the Redis connection parameters
+# Define Redis connection parameters
 redis_host = os.getenv("REDIS_HOST")
 redis_port = os.getenv("REDIS_PORT")
 redis_password = os.getenv("REDIS_PASSWORD")
@@ -21,83 +21,99 @@ redis_client = redis.StrictRedis(
     decode_responses=True
 )
 
-def login():
-    while True:
-        username = input("Enter your username: ")
-        password = getpass.getpass("Enter your password: ")
-        stored_password = redis_client.hget('users', username)
-        
-        if stored_password == password:
-            return username
+class User:
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+
+    def check_password(self, password):
+        return self.password == password
+
+class UserManager:
+    def login(self):
+        while True:
+            username = input("Enter your username: ")
+            password = getpass.getpass("Enter your password: ")
+            stored_password = redis_client.hget('users', username)
+
+            if stored_password and stored_password == password:
+                return User(username, password)
+            else:
+                print("Invalid username or password. Try again.")
+
+    def signup(self):
+        while True:
+            username = input("Enter a new username: ")
+            password = getpass.getpass("Enter a password: ")
+
+            if not redis_client.hexists('users', username):
+                redis_client.hset('users', username, password)
+                print("Signup successful. You can now log in.")
+                return User(username, password)
+            else:
+                print("Username already exists. Try a different one.")
+
+class PackageManager:
+    @staticmethod
+    def get_local_pip_list():
+        try:
+            # Use subprocess to run the 'pip3 list' command
+            pip_list = subprocess.check_output(['pip3', 'list']).decode('utf-8')
+            return pip_list
+        except subprocess.CalledProcessError:
+            print("Failed to get local pip3 list. Make sure 'pip3' is installed.")
+            return None
+
+    @staticmethod
+    def upload_pip(user):
+        pip_list = PackageManager.get_local_pip_list()
+        if pip_list is not None:
+            redis_client.set(user.username, pip_list)
+            print("Pip3 list uploaded successfully.")
+
+    @staticmethod
+    def download_all_packages(user):
+        pip_list = redis_client.get(user.username)
+
+        if pip_list:
+            for line in pip_list.split('\n'):
+                if line:
+                    package_info = line.strip().split()
+                    if len(package_info) >= 1:
+                        package_name = package_info[0]
+                        print(f"Downloading and installing {package_name}...")
+                        subprocess.call(['pip3', 'install', package_name])
+                        print(f"{package_name} has been downloaded and installed.")
         else:
-            print("Invalid username or password. Try again.")
-
-def signup():
-    while True:
-        username = input("Enter a new username: ")
-        password = getpass.getpass("Enter a password: ")
-        
-        if not redis_client.hexists('users', username):
-            redis_client.hset('users', username, password)
-            print("Signup successful. You can now log in.")
-            return
-
-        print("Username already exists. Try a different one.")
-
-def get_local_pip_list():
-    try:
-        # Use subprocess to run the 'pip3 list' command
-        pip_list = subprocess.check_output(['pip3', 'list']).decode('utf-8')
-        return pip_list
-    except subprocess.CalledProcessError:
-        print("Failed to get local pip3 list. Make sure 'pip3' is installed.")
-        return None
-
-def upload_pip(username):
-    pip_list = get_local_pip_list()
-    if pip_list is not None:
-        redis_client.set(username, pip_list)
-        print("Pip3 list uploaded successfully.")
-
-def download_all_packages(username):
-    pip_list = redis_client.get(username)
-    
-    if pip_list:
-        for line in pip_list.split('\n'):
-            if line:
-                package_info = line.strip().split()
-                if len(package_info) >= 1:
-                    package_name = package_info[0]
-                    print(f"Downloading and installing {package_name}...")
-                    subprocess.call(['pip3', 'install', package_name])
-                    print(f"{package_name} has been downloaded and installed.")
-    else:
-        print("No pip data found for the user.")
+            print("No pip data found for the user.")
 
 def main():
-    username = None  # Initialize username as None
+    user_manager = UserManager()
+    package_manager = PackageManager()
+    user = None
+
     while True:
-        if username is None:
+        if user is None:
             print("\n1. Login\n2. Signup\n5. Quit")
         else:
-            print(f"\nLogged in as: {username}\n3. Upload Pip List\n4. Download All Packages\n5. Sign Out")
+            print(f"\nLogged in as: {user.username}\n3. Upload Pip List\n4. Download All Packages\n5. Sign Out")
         choice = input("Enter your choice: ")
 
         if choice == '1':
-            username = login()
+            user = user_manager.login()
         elif choice == '2':
-            signup()
+            user = user_manager.signup()
         elif choice == '3':
-            if username is not None:
-                upload_pip(username)
+            if user is not None:
+                package_manager.upload_pip(user)
             else:
                 print("Please log in first.")
         elif choice == '4':
-            if username is not None:
-                download_all_packages(username)
+            if user is not None:
+                package_manager.download_all_packages(user)
         elif choice == '5':
-            if username is not None:
-                username = None  # Sign out by resetting the username
+            if user is not None:
+                user = None  # Sign out by resetting the user
                 print("Signed out.")
             else:
                 break
