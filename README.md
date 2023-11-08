@@ -1,4 +1,3 @@
-```markdown
 # PIP-List-Installer - README
 
 ## Introduction
