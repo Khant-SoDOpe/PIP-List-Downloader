@@ -1,4 +1,4 @@
-# PIP-List-Installer - README
+# PIP-List-Installer
 
 ## Introduction
 
