@@ -1,11 +1,8 @@
 import redis
 import getpass
 import subprocess
-from dotenv import load_dotenv
+import pkg_resources
 import os
-
-# Load environment variables from a .env file
-load_dotenv()
 
 # Define Redis connection parameters
 redis_host = os.getenv("REDIS_HOST")
@@ -34,7 +31,7 @@ class UserManager:
         while True:
             username = input("Enter your username: ")
             password = getpass.getpass("Enter your password: ")
-            stored_password = redis_client.hget('users', username)
+            stored_password = redis_client.hget('users', username)  
 
             if stored_password and stored_password == password:
                 return User(username, password)
@@ -57,13 +54,13 @@ class PackageManager:
     @staticmethod
     def get_local_pip_list():
         try:
-            # Use subprocess to run the 'pip3 list' command
-            pip_list = subprocess.check_output(['pip3', 'list']).decode('utf-8')
-            return pip_list
-        except subprocess.CalledProcessError:
-            print("Failed to get local pip3 list. Make sure 'pip3' is installed.")
+            installed_packages = pkg_resources.working_set
+            installed_packages_list = sorted(["%s==%s" % (i.key, i.version) for i in installed_packages])
+            return '\n'.join(installed_packages_list)
+        except Exception as e:
+            print(f"Failed to get local pip list: {e}")
             return None
-
+        
     @staticmethod
     def upload_pip(user):
         pip_list = PackageManager.get_local_pip_list()
