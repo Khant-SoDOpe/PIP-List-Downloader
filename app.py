@@ -5,9 +5,9 @@ import pkg_resources
 import os
 
 # Define Redis connection parameters
-redis_host = os.getenv("REDIS_HOST")
-redis_port = os.getenv("REDIS_PORT")
-redis_password = os.getenv("REDIS_PASSWORD")
+redis_host = "grown-zebra-32333.upstash.io"
+redis_port = 32333
+redis_password = "4d3b00d70ec34c0fbabc973de1650281"
 
 # Initialize the Redis connection
 redis_client = redis.StrictRedis(

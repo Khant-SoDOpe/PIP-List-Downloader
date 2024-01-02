@@ -1,8 +1,8 @@
-# PIP-List-Installer
+# Prizama
 
 ## Introduction
 
-**PIP-List-Installer** is a Python command-line application that helps you manage your Python package dependencies with ease. It allows you to log in, sign up, upload your local pip package list to Redis, and download packages from Redis. Below are the features and instructions for using this application.
+**Prizama** is a Python command-line application that helps you manage your Python package dependencies with ease. It allows you to log in, sign up, upload your local pip package list to Redis, and download packages from Redis. Below are the features and instructions for using this application.
 
 ## Features
 
@@ -63,7 +63,7 @@ Before using this application, make sure you have the following prerequisites:
 
 ### Usage
 
-Run the PIP-List-Installer application by executing the following command:
+Run the Prizama application by executing the following command:
 
 ```
 python pip_list_installer.py
