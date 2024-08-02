@@ -3,11 +3,13 @@ import getpass
 import subprocess
 import pkg_resources
 import os
+import sys
+import pip  # Import pip module for direct usage
 
 # Define Redis connection parameters
-redis_host = "grown-zebra-32333.upstash.io"
-redis_port = 32333
-redis_password = "4d3b00d70ec34c0fbabc973de1650281"
+redis_host = os.getenv("REDIS_HOST")
+redis_port = int(os.getenv("REDIS_PORT"))
+redis_password = os.getenv("REDIS_PASSWORD")
 
 # Initialize the Redis connection
 redis_client = redis.StrictRedis(
@@ -53,6 +55,9 @@ class UserManager:
 class PackageManager:
     @staticmethod
     def get_local_pip_list():
+        """
+        Retrieve the list of installed packages using pkg_resources.
+        """
         try:
             installed_packages = pkg_resources.working_set
             installed_packages_list = sorted(["%s==%s" % (i.key, i.version) for i in installed_packages])
@@ -60,22 +65,55 @@ class PackageManager:
         except Exception as e:
             print(f"Failed to get local pip list: {e}")
             return None
-        
+
     @staticmethod
-    def upload_pip(user):
-        pip_list = PackageManager.get_local_pip_list()
+    def get_local_pip_list_using_pip():
+        """
+        Retrieve the list of installed packages using pip module.
+        """
+        try:
+            # Using python -m pip to avoid wrapper script warning
+            result = subprocess.run(
+                [sys.executable, '-m', 'pip', 'list', '--format=freeze'],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
+                return result.stdout.strip()
+            else:
+                print(f"Failed to run pip list: {result.stderr}")
+                return None
+        except Exception as e:
+            print(f"Failed to get local pip list using pip: {e}")
+            return None
+
+    @staticmethod
+    def upload_pip(user, use_pip_module=False):
+        """
+        Upload the list of installed packages to Redis.
+        """
+        if use_pip_module:
+            pip_list = PackageManager.get_local_pip_list_using_pip()
+        else:
+            pip_list = PackageManager.get_local_pip_list()
+
         if pip_list is not None:
             redis_client.set(user.username, pip_list)
-            print("Pip3 list uploaded successfully.")
+            print("Pip list uploaded successfully.")
+        else:
+            print("Failed to retrieve pip list.")
 
     @staticmethod
     def download_all_packages(user):
+        """
+        Download and install all packages from the stored pip list in Redis.
+        """
         pip_list = redis_client.get(user.username)
 
         if pip_list:
             for line in pip_list.split('\n'):
                 if line:
-                    package_info = line.strip().split()
+                    package_info = line.strip().split('==')
                     if len(package_info) >= 1:
                         package_name = package_info[0]
                         print(f"Downloading and installing {package_name}...")
@@ -102,12 +140,16 @@ def main():
             user = user_manager.signup()
         elif choice == '3':
             if user is not None:
-                package_manager.upload_pip(user)
+                # Ask the user whether to use the pip module or pkg_resources
+                use_pip_module = input("Use pip module to get pip list? (yes/no): ").strip().lower() == 'yes'
+                package_manager.upload_pip(user, use_pip_module)
             else:
                 print("Please log in first.")
         elif choice == '4':
             if user is not None:
                 package_manager.download_all_packages(user)
+            else:
+                print("Please log in first.")
         elif choice == '5':
             if user is not None:
                 user = None  # Sign out by resetting the user

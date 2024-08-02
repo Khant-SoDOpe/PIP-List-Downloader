@@ -1,89 +1,95 @@
-# Prizama
+# Prizama's Package Manager
 
-## Introduction
+## Overview
 
-**Prizama** is a Python command-line application that helps you manage your Python package dependencies with ease. It allows you to log in, sign up, upload your local pip package list to Redis, and download packages from Redis. Below are the features and instructions for using this application.
+This project includes a package manager with two versions:
+1. **GUI Version** - A graphical user interface (GUI) for managing packages.
+2. **Command-Line Version** - A command-line interface (CLI) for managing packages without a GUI.
 
-## Features
+## Prerequisites
 
-- **User Authentication**: Users can log in with their username and password or sign up for a new account.
+Before running either version, ensure you have the following installed:
+- Python 3.x
+- Redis server
 
-- **Upload Pip List**: Once logged in, users can upload their local `pip` package list to the cloud using Redis. This is useful for keeping track of your project dependencies.
+## Installation
 
-- **Download Packages**: Users can download packages from their Redis-stored list, making it easy to set up the same environment on different machines.
+1. Clone the repository or download the code files.
 
-## Usage
+2. Install the required Python packages. You can do this by running:
 
-### Prerequisites
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-Before using this application, make sure you have the following prerequisites:
+3. Set up your environment variables:
 
-- Python 3.x installed
-- Access to a Redis server
-- Required Python libraries installed (`redis`, `getpass`, `subprocess`, `python-dotenv`)
+    - Copy the `.env.example` file to `.env`:
 
-### Installation
+      ```bash
+      cp .env.example .env
+      ```
 
-1. Clone this repository:
+    - Edit the `.env` file to include your Redis connection parameters:
 
-   ```
-   git clone <repository-url>
-   ```
+      ```
+      REDIS_HOST=your_redis_host
+      REDIS_PORT=your_redis_port
+      REDIS_PASSWORD=your_redis_password
+      ```
 
-2. Change the directory to the project folder:
+## GUI Version
 
-   ```
-   cd <project-folder>
-   ```
+### Overview
 
-3. Create a virtual environment (optional but recommended):
+The GUI version uses Tkinter to provide a user-friendly interface for managing packages.
 
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+### Running the GUI Version
 
-4. Install the required Python libraries:
+1. **Start the Application**
 
-   ```
-   pip install -r requirements.txt
-   ```
+    Run the following command to start the GUI application:
 
-### Configuration
+    ```bash
+    python app-gui.py
+    ```
 
-1. Create a `.env` file in the project directory with your Redis connection parameters:
+2. **Usage**
 
-   ```plaintext
-   REDIS_HOST=your-redis-host
-   REDIS_PORT=your-redis-port
-   REDIS_PASSWORD=your-redis-password
-   ```
+    - **Login**: Click "Login" and enter your username and password.
+    - **Signup**: Click "Signup" to create a new account.
+    - **Upload Selected Packages**: Select packages from the table and click "Upload Selected Packages" to upload them to Redis.
+    - **Download All Packages**: Click "Download All Packages" to download and install all packages associated with the logged-in user.
+    - **Download Selected Packages**: Select packages from the table and click "Download Selected Packages" to download and install them.
+    - **Logout**: Click "Logout" to sign out of your account.
 
-2. Ensure that the `.env` file is added to your `.gitignore` to prevent it from being committed to your Git repository.
+## Command-Line Version
 
-### Usage
+### Overview
 
-Run the Prizama application by executing the following command:
+The command-line version provides a terminal-based interface for managing packages.
 
-```
-python pip_list_installer.py
-```
+### Running the Command-Line Version
 
-Follow the on-screen instructions to log in, sign up, upload your pip package list to Redis, and download packages from Redis.
+1. **Start the Application**
 
-### Copyright
+    Run the following command to start the CLI application:
 
-This code is provided under the following copyright terms:
+    ```bash
+    python app.py
+    ```
 
-- You are allowed to use this code for personal and educational purposes.
-- You may not distribute, sublicense, or make derivative works of this code.
-- You may not use this code for commercial purposes without explicit permission.
+2. **Usage**
 
-## License
+    - **Login**: Enter your username and password when prompted.
+    - **Signup**: Create a new account by entering a new username and password when prompted.
+    - **Upload Pip List**: Choose whether to use the pip module or pkg_resources to upload the pip list.
+    - **Download All Packages**: Download and install all packages associated with the logged-in user.
+    - **Sign Out**: Sign out of your account.
 
-This project is licensed under the [MIT License](LICENSE).
+## Notes
 
-## **Contact**
+- Ensure Redis is running before using either version of the package manager.
+- Customize the `.env` file with your Redis server details.
 
-For any questions or inquiries, please contact khant_sodope@icloud.com.
-
+For more information or help, feel free to reach out to me.
