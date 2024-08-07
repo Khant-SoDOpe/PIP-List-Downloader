@@ -4,12 +4,20 @@ import subprocess
 import pkg_resources
 import os
 import sys
-import pip  # Import pip module for direct usage
+from dotenv import load_dotenv
+import bcrypt  # Added bcrypt for password hashing
 
+load_dotenv()
 # Define Redis connection parameters
 redis_host = os.getenv("REDIS_HOST")
-redis_port = int(os.getenv("REDIS_PORT"))
+redis_port = os.getenv("REDIS_PORT")
 redis_password = os.getenv("REDIS_PASSWORD")
+
+# Validate environment variables
+if not redis_host or not redis_port:
+    raise ValueError("REDIS_HOST and REDIS_PORT must be set.")
+
+redis_port = int(redis_port)
 
 # Initialize the Redis connection
 redis_client = redis.StrictRedis(
@@ -21,22 +29,25 @@ redis_client = redis.StrictRedis(
 )
 
 class User:
-    def __init__(self, username, password):
+    def __init__(self, username):
         self.username = username
-        self.password = password
 
     def check_password(self, password):
-        return self.password == password
+        stored_password = redis_client.hget('users', self.username)
+        return stored_password and bcrypt.checkpw(password.encode(), stored_password.encode())
+
+    def set_password(self, password):
+        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        redis_client.hset('users', self.username, hashed_password)
 
 class UserManager:
     def login(self):
         while True:
             username = input("Enter your username: ")
             password = getpass.getpass("Enter your password: ")
-            stored_password = redis_client.hget('users', username)  
-
-            if stored_password and stored_password == password:
-                return User(username, password)
+            user = User(username)
+            if user.check_password(password):
+                return user
             else:
                 print("Invalid username or password. Try again.")
 
@@ -46,9 +57,10 @@ class UserManager:
             password = getpass.getpass("Enter a password: ")
 
             if not redis_client.hexists('users', username):
-                redis_client.hset('users', username, password)
+                user = User(username)
+                user.set_password(password)
                 print("Signup successful. You can now log in.")
-                return User(username, password)
+                return user
             else:
                 print("Username already exists. Try a different one.")
 
@@ -72,7 +84,6 @@ class PackageManager:
         Retrieve the list of installed packages using pip module.
         """
         try:
-            # Using python -m pip to avoid wrapper script warning
             result = subprocess.run(
                 [sys.executable, '-m', 'pip', 'list', '--format=freeze'],
                 capture_output=True,
@@ -117,7 +128,7 @@ class PackageManager:
                     if len(package_info) >= 1:
                         package_name = package_info[0]
                         print(f"Downloading and installing {package_name}...")
-                        subprocess.call(['pip3', 'install', package_name])
+                        subprocess.call([sys.executable, '-m', 'pip', 'install', package_name])
                         print(f"{package_name} has been downloaded and installed.")
         else:
             print("No pip data found for the user.")
@@ -140,7 +151,6 @@ def main():
             user = user_manager.signup()
         elif choice == '3':
             if user is not None:
-                # Ask the user whether to use the pip module or pkg_resources
                 use_pip_module = input("Use pip module to get pip list? (yes/no): ").strip().lower() == 'yes'
                 package_manager.upload_pip(user, use_pip_module)
             else:
@@ -152,7 +162,7 @@ def main():
                 print("Please log in first.")
         elif choice == '5':
             if user is not None:
-                user = None  # Sign out by resetting the user
+                user = None
                 print("Signed out.")
             else:
                 break

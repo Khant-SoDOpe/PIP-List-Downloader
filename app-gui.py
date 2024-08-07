@@ -6,6 +6,7 @@ import pkg_resources
 import os
 import sys
 from dotenv import load_dotenv
+import bcrypt  # Added bcrypt for password hashing
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,6 +15,10 @@ load_dotenv()
 redis_host = os.getenv("REDIS_HOST")
 redis_port = int(os.getenv("REDIS_PORT"))
 redis_password = os.getenv("REDIS_PASSWORD")
+
+# Validate environment variables
+if not redis_host or not redis_port:
+    raise ValueError("REDIS_HOST and REDIS_PORT must be set.")
 
 # Initialize the Redis connection
 redis_client = redis.StrictRedis(
@@ -25,24 +30,29 @@ redis_client = redis.StrictRedis(
 )
 
 class User:
-    def __init__(self, username, password):
+    def __init__(self, username):
         self.username = username
-        self.password = password
 
     def check_password(self, password):
-        return self.password == password
+        stored_password = redis_client.hget('users', self.username)
+        return stored_password and bcrypt.checkpw(password.encode(), stored_password.encode())
+
+    def set_password(self, password):
+        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        redis_client.hset('users', self.username, hashed_password)
 
 class UserManager:
     def login(self, username, password):
-        stored_password = redis_client.hget('users', username)
-        if stored_password and stored_password == password:
-            return User(username, password)
+        user = User(username)
+        if user.check_password(password):
+            return user
         return None
 
     def signup(self, username, password):
         if not redis_client.hexists('users', username):
-            redis_client.hset('users', username, password)
-            return User(username, password)
+            user = User(username)
+            user.set_password(password)
+            return user
         return None
 
 class PackageManager:
@@ -101,7 +111,7 @@ class PackageManager:
             if len(package_info) >= 1:
                 package_name = package_info[0]
                 progress_callback(f"Downloading and installing {package_name}...")
-                subprocess.call(['pip3', 'install', package_name])
+                subprocess.call([sys.executable, '-m', 'pip', 'install', package_name])
                 progress_callback(f"{package_name} has been downloaded and installed.")
         return True
 
@@ -116,7 +126,7 @@ class PackageManager:
                 if len(package_info) >= 1:
                     package_name = package_info[0]
                     progress_callback(f"Downloading and installing {package_name}...")
-                    subprocess.call(['pip3', 'install', package_name])
+                    subprocess.call([sys.executable, '-m', 'pip', 'install', package_name])
                     progress_callback(f"{package_name} has been downloaded and installed.")
             return True
         else:
